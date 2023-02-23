@@ -1,3 +1,15 @@
+
+class TestResult:
+    def __init__(self) -> None:
+        self.runCount = 0
+
+    def testStarted(self) -> None:
+        self.runCount = self.runCount + 1
+
+    def summary(self) -> str:
+        return "%d run, 0 failed" % self.runCount
+
+
 class TestCase:
     def __init__(self, name: str):
         self.name = name
@@ -5,35 +17,53 @@ class TestCase:
     def setUp(self) -> None:
         pass
 
-    def run(self) -> None:
+    def tearDown(self) -> None:
+        pass
+
+    def run(self) -> TestResult:
+        result = TestResult()
+        result.testStarted()
         self.setUp()
         # 自身のインスタンスの名前(つまりテストメソッド名)を取得し、それを実行する
         method = getattr(self, self.name)
         method()
+        self.tearDown()
+        return result
 
 
 class WasRun(TestCase):
 
     def setUp(self) -> None:
-        self.wasRun: int | None = None
-        self.wasSetUp = 1
+        self.log: str = "setUp "
 
     def testMethod(self) -> None:
-        self.wasRun = 1
+        self.log = self.log + "testMethod "
+
+    def testBrokenMethod(self) -> None:
+        raise Exception
+
+    def tearDown(self) -> None:
+        self.log = self.log + "tearDown "
 
 
 class TestCaseTest(TestCase):
-    def setUp(self) -> None:
-        self.test = WasRun("testMethod")
 
-    def testRunning(self) -> None:
-        self.test.run()
-        assert (self.test.wasRun)
+    def testTemplateMethod(self) -> None:
+        test = WasRun("testMethod")
+        test.run()
+        assert ("setUp testMethod tearDown " == test.log)
 
-    def testSetUp(self) -> None:
-        self.test.run()
-        assert (self.test.wasSetUp)
+    def testResult(self) -> None:
+        test = WasRun("testMethod")
+        result = test.run()
+        assert ("1 run, 0 failed" == result.summary())
+
+    def testFailedResult(self) -> None:
+        test = WasRun("testBrokenMethod")
+        result = test.run()
+        assert ("1 run, 1 failed" == result.summary())
 
 
-TestCaseTest("testRunning").run()
-TestCaseTest("testSetUp").run()
+TestCaseTest("testTemplateMethod").run()
+TestCaseTest("testResult").run()
+# TestCaseTest("testFailedResult").run()
