@@ -2,12 +2,16 @@
 class TestResult:
     def __init__(self) -> None:
         self.runCount = 0
+        self.errorCount = 0
 
     def testStarted(self) -> None:
         self.runCount = self.runCount + 1
 
+    def testFailed(self) -> None:
+        self.errorCount = self.errorCount + 1
+
     def summary(self) -> str:
-        return "%d run, 0 failed" % self.runCount
+        return "%d run, %d failed" % (self.runCount, self.errorCount)
 
 
 class TestCase:
@@ -25,8 +29,11 @@ class TestCase:
         result.testStarted()
         self.setUp()
         # 自身のインスタンスの名前(つまりテストメソッド名)を取得し、それを実行する
-        method = getattr(self, self.name)
-        method()
+        try:
+            method = getattr(self, self.name)
+            method()
+        except BaseException:
+            result.testFailed()
         self.tearDown()
         return result
 
@@ -63,7 +70,14 @@ class TestCaseTest(TestCase):
         result = test.run()
         assert ("1 run, 1 failed" == result.summary())
 
+    def testFailedResultFormatting(self) -> None:
+        result = TestResult()
+        result.testStarted()
+        result.testFailed()
+        assert ("1 run, 1 failed" == result.summary())
 
-TestCaseTest("testTemplateMethod").run()
-TestCaseTest("testResult").run()
-# TestCaseTest("testFailedResult").run()
+
+print(TestCaseTest("testTemplateMethod").run().summary())
+print(TestCaseTest("testResult").run().summary())
+print(TestCaseTest("testFailedResult").run().summary())
+print(TestCaseTest("testFailedResultFormatting").run().summary())
